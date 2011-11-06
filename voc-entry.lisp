@@ -21,7 +21,15 @@
    (falsch :accessor falsch
            :initform 0)))
 
-(create-standard-print-object vokabel dansk deutsch (richtig falsch))
+(defclass lektion (persistent-base)
+  ((name :accessor name
+         :initform "Lektion ??")
+   (vokabeln :accessor vokabeln
+             :initform (make-array 10 :adjustable t :fill-pointer 0))))
+
+(create-standard-print-object vokabel
+                              dansk "-" deutsch (richtig falsch))
+(create-standard-print-object lektion name)
 
 (defun make-vokabel-entry-store ()
   (let ((store (make-instance 'array-list-store)))
@@ -41,9 +49,11 @@
     (when row-paths
       (first (tree-path-indices (first row-paths))))))
 
-(defun entry-ui ()
+(defun entry-ui (&optional lektion)
   "Gebe Vokabeln in eine Liste ein."
   (within-main-loop
+    (unless lektion
+      (setf lektion (make-instance 'lektion)))
     ;; the general layout of the entry ui
     (let-ui (gtk-window
              :type :toplevel
@@ -53,8 +63,8 @@
              :var window
              (v-box
               (h-box
-               (entry  :primary-icon-tooltip-text "Lektion" :text "Lektion ??" :var lektion-name)
-               (label :label "  ")
+               (entry  :primary-icon-tooltip-text "Lektion" :text (name lektion) :var lektion-name)
+               (label :label " ")     ; use a label as a simple spacer
                (button :label "Ändern" :var edit-button) :expand nil
                (button :label "Löschen" :var del-button) :expand nil) :expand nil
               (scrolled-window
@@ -68,6 +78,9 @@
       ;; storage and state
       (let ((vokabeln (make-vokabel-entry-store))
             (modus :neu))
+        ;; populate the store
+        (setf (slot-value vokabeln 'gtk::items) (vokabeln lektion))
+        ;; connect the model to the view
         (setf (tree-view-model view) vokabeln)
         ;; Neue Vokabel/Ändern
         (connect-signal
@@ -86,10 +99,10 @@
                      ;; reset modus var and button label
                      (button-label save-button) "Neu"
                      modus :neu))
-           (dbug "~A" (gtk::store-items vokabeln))
            ;; reset inputs
            (setf #1# ""
-                 #2# "")))
+                 #2# "")
+           #3=(widget-grab-focus dansk-entry)))
         ;; Änderung einleiten
         (connect-signal
          edit-button "clicked"
@@ -101,15 +114,27 @@
                       (button-label save-button) "Speichern"
                       ;; load current values to text entries
                       #1# (dansk modus)
-                      #2# (deutsch modus)))))
+                      #2# (deutsch modus)))
+           #3#))
         ;; Vokabel löschen
         (connect-signal
          del-button "clicked"
          (ilambda (b)
            (aif (tv-selected-row view)
                 (store-remove-item vokabeln
-                                   (store-item vokabeln it))))))
+                                   (store-item vokabeln it)))
+           #3#))
+        ;; on closing the window, move the edits back to the lektion.
+        (connect-signal
+         window "destroy"
+         (ilambda (w)
+           (setf (name lektion) (entry-text lektion-name)
+                 (vokabeln lektion) (gtk::store-items vokabeln))
+           ;; TODO remove when integrating into main app
+           (leave-gtk-main))))
+      ;; setup the tree view
       (add-tv-column view "Dansk" 0)
       (add-tv-column view "Deutsch" 1)
-      (connect-signal window "destroy" (ilambda (w) (leave-gtk-main)))
+      ;; focus input
+      #3#
       (widget-show window))))
