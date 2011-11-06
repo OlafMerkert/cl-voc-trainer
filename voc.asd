@@ -1,6 +1,6 @@
 (defsystem :voc
   :depends-on (ol-utils
-               ltk
+               cl-gtk2-gtk
                cl-who
                cxml)
   :serial t
