@@ -31,10 +31,20 @@
                               dansk "-" deutsch (richtig falsch))
 (create-standard-print-object lektion name)
 
+(defun lektion-voc-count (lektion)
+  (length (vokabeln lektion)))
+
 (defun make-vokabel-entry-store ()
   (let ((store (make-instance 'array-list-store)))
     (store-add-column store "gchararray" #'dansk)
     (store-add-column store "gchararray" #'deutsch)
+    store))
+
+(defun make-lektion-store ()
+  (let ((store (make-instance 'array-list-store)))
+    (store-add-column store "gchararray" #'name)
+    (store-add-column store "gint" #'lektion-voc-count)
+    ;; TODO populate from prevalence
     store))
 
 (defun add-tv-column (view title col-index)
@@ -49,17 +59,68 @@
     (when row-paths
       (first (tree-path-indices (first row-paths))))))
 
-(defun entry-ui (&optional lektion)
+(defmacro on-clicked (button &body body)
+  `(connect-signal ,button "clicked"
+                   (ilambda (b) ,@body)))
+
+(defun lektion-overview-ui ()
+  (within-main-loop
+    (let-ui (gtk-window
+             :type :toplevel
+             :title "Vokabeltrainer - Lektionsübersicht"
+             :default-width 500
+             :default-height 300
+             :var window
+             (v-box
+              (h-button-box
+               (button :label "Trainieren" :var train-button) :expand nil
+               (button :label "Korrigieren" :var change-button) :expand nil
+               (button :label "Neu anlegen" :var new-button) :expand nil
+               (button :label "Löschen" :var del-button) :expand nil
+               (label) 
+               (button :label "Sichern" :var save-button) :expand nil) :expand nil
+              (scrolled-window
+               :hscrollbar-policy :never
+               :vscrollbar-policy :automatic
+               (tree-view :var view))))
+      (let ((lektionen (make-lektion-store)))
+        ;; connect model to view
+        (setf (tree-view-model view) lektionen)
+        ;; Button presses
+        (on-clicked change-button
+          (aif (tv-selected-row view)
+               (progn
+                 #1=(setf (widget-sensitive window) nil)
+                 (entry-ui window (store-item lektionen it)))))
+        (on-clicked new-button
+          (let ((l (make-instance 'lektion)))
+            (store-add-item lektionen l)
+            #1#
+            (entry-ui window l)))
+        (on-clicked del-button
+          (aif (tv-selected-row view)
+               (store-remove-item lektionen
+                                  (store-item lektionen it))))
+        ;; TODO
+        #|(on-clicked train-button)|#
+        #|(on-clicked save-button)|#
+        )
+      ;; configure tree view
+      (add-tv-column view "Lektionstitel" 0)
+      (add-tv-column view "Anzahl Vokabeln" 1)
+      (connect-signal window "destroy" (ilambda (w) (leave-gtk-main)))
+      (widget-show window))))
+
+(defun entry-ui (parent lektion)
   "Gebe Vokabeln in eine Liste ein."
   (within-main-loop
-    (unless lektion
-      (setf lektion (make-instance 'lektion)))
     ;; the general layout of the entry ui
     (let-ui (gtk-window
              :type :toplevel
              :title "Vokabeleingabe"
              :default-width 500
              :default-height 700
+             :transient-for parent
              :var window
              (v-box
               (h-box
@@ -83,54 +144,48 @@
         ;; connect the model to the view
         (setf (tree-view-model view) vokabeln)
         ;; Neue Vokabel/Ändern
-        (connect-signal
-         save-button "clicked"
-         (ilambda (b)
-           ;; alter/insert data
-           (if (eq modus :neu)
-               ;; create new item
-               (store-add-item vokabeln
-                               (make-instance 'vokabel
-                                              :dansk   #1=(entry-text dansk-entry)
-                                              :deutsch #2=(entry-text deutsch-entry)))
-               ;; store new values
-               (setf (dansk modus) #1#
-                     (deutsch modus) #2#
-                     ;; reset modus var and button label
-                     (button-label save-button) "Neu"
-                     modus :neu))
-           ;; reset inputs
-           (setf #1# ""
-                 #2# "")
-           #3=(widget-grab-focus dansk-entry)))
+        (on-clicked save-button 
+          ;; alter/insert data
+          (if (eq modus :neu)
+              ;; create new item
+              (store-add-item vokabeln
+                              (make-instance 'vokabel
+                                             :dansk   #1=(entry-text dansk-entry)
+                                             :deutsch #2=(entry-text deutsch-entry)))
+              ;; store new values
+              (setf (dansk modus) #1#
+                    (deutsch modus) #2#
+                    ;; reset modus var and button label
+                    (button-label save-button) "Neu"
+                    modus :neu))
+          ;; reset inputs
+          (setf #1# ""
+                #2# "")
+          #3=(widget-grab-focus dansk-entry))
         ;; Änderung einleiten
-        (connect-signal
-         edit-button "clicked"
-         (ilambda (b)
-           ;; find out which rows are selected
-           (aif (tv-selected-row view)
-                (setf modus (store-item vokabeln it)
-                      ;; Change button label
-                      (button-label save-button) "Speichern"
-                      ;; load current values to text entries
-                      #1# (dansk modus)
-                      #2# (deutsch modus)))
-           #3#))
+        (on-clicked edit-button 
+          ;; find out which rows are selected
+          (aif (tv-selected-row view)
+               (setf modus (store-item vokabeln it)
+                     ;; Change button label
+                     (button-label save-button) "Speichern"
+                     ;; load current values to text entries
+                     #1# (dansk modus)
+                     #2# (deutsch modus)))
+          #3#)
         ;; Vokabel löschen
-        (connect-signal
-         del-button "clicked"
-         (ilambda (b)
-           (aif (tv-selected-row view)
-                (store-remove-item vokabeln
-                                   (store-item vokabeln it)))
-           #3#))
+        (on-clicked del-button 
+          (aif (tv-selected-row view)
+               (store-remove-item vokabeln
+                                  (store-item vokabeln it)))
+          #3#)
         ;; on closing the window, move the edits back to the lektion.
         (connect-signal
          window "destroy"
          (ilambda (w)
            (setf (name lektion) (entry-text lektion-name)
-                 (vokabeln lektion) (gtk::store-items vokabeln))
-           ;; TODO remove when integrating into main app
+                 (vokabeln lektion) (gtk::store-items vokabeln)
+                 (widget-sensitive parent) t)
            (leave-gtk-main))))
       ;; setup the tree view
       (add-tv-column view "Dansk" 0)
