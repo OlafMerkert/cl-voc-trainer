@@ -9,17 +9,24 @@
 ;;; Persistenz mit cl-prevalence
 
 (defparameter *prevalence-dir* #P "~/Studium/Dänisch I/vokabeln2/")
-(defparameter *default-store* nil)
+(defvar *default-store* nil) ; don't just throw away a connection
+
+(defmacro! ensure-adj-array (o!place)
+  "Transform the sequence held in place to an adjustable array.
+Remember, nil is a sequence too!"
+  `(unless (adjustable-array-p ,g!place)
+    (let ((,g!array (make-array (length ,g!place) :adjustable t :fill-pointer t)))
+      (map-into ,g!array #'identity ,g!place)
+      (setf ,o!place ,g!array))))
 
 (defun load-data ()
   (ensure-directories-exist *prevalence-dir*)
+  ;; init prevalence
   (unless *default-store*
-    ;; init prevalence
     (setf *default-store*
-          (make-prevalence-system *prevalence-dir*))
-    ;; initiliase the lektionen root object, if it is not available yet
-    (unless #5=(get-root-object *default-store* :lektionen)
-            (setf #5# (make-array 2 :adjustable t :fill-pointer 0)))))
+          (make-prevalence-system *prevalence-dir*)))
+  ;; initiliase the lektionen root object, if it is not available yet
+  (ensure-adj-array (get-root-object *default-store* :lektionen)))
 
 ;;; Oberfläche für die Eingabe
 
@@ -123,13 +130,14 @@
                      (gtk::store-items lektionen))
             #1#
             (entry-ui window l)))
-        (on-clicked del-button
+        ;; TODO
+        #|(on-clicked del-button
           (aif (tv-selected-row view)
                (progn
                  (store-remove-item lektionen
                                    (store-item lektionen it))
                  #5# ; propagate
-                 )))
+                 )))|#
         ;; TODO
         #|(on-clicked train-button)|#
         (on-clicked save-button
@@ -171,7 +179,8 @@
       (let ((vokabeln (make-vokabel-entry-store))
             (modus :neu))
         ;; populate the store
-        (setf (slot-value vokabeln 'gtk::items) (vokabeln lektion))
+        (setf #7=(slot-value vokabeln 'gtk::items) (vokabeln lektion))
+        (ensure-adj-array #7#)
         ;; connect the model to the view
         (setf (tree-view-model view) vokabeln)
         ;; Neue Vokabel/Ändern
@@ -204,12 +213,12 @@
                      #1# (dansk modus)
                      #2# (deutsch modus)))
           #3#)
-        ;; Vokabel löschen
-        (on-clicked del-button 
+        ;; TODO Vokabel löschen
+        #|(on-clicked del-button 
           (aif (tv-selected-row view)
                (store-remove-item vokabeln
                                   (store-item vokabeln it)))
-          #3#)
+          #3#)|#
         ;; on closing the window, move the edits back to the lektion.
         (connect-signal
          window "destroy"
