@@ -1,6 +1,7 @@
 (defpackage :voc-train
   (:use :cl :ol
-        :ltk))
+        :ltk)
+  (:import-from :ltk :self))
 
 (in-package :voc-train)
 

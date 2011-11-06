@@ -1,5 +1,4 @@
 (defpackage :voc-entry
-  (:use :cl :ol
-        :ltk))
+  (:use :cl :ol))
 
 (in-package :voc-entry)

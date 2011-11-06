@@ -51,3 +51,20 @@
                 do (htm (:vv
                          (loop for v in vv
                              do (htm (:v (esc v))))))))))))
+
+;; (defmethod input (file)
+;;   (with-open-file (stream file :direction :input)
+;;     (input stream)))
+
+;; (defmethod input ((stream stream))
+;;   ;; TODO parse the voc file
+;;   (let* ((document (parse-stream stream (make-dom-builder)))
+;;          (root (aref (children document 0))))
+;;     )
+;;   )
+
+;; (defun input-file (stream))
+
+;; (defun input-module (stream))
+
+;; (defun input-voc (stream module))
