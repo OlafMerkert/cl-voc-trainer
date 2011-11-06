@@ -1,8 +1,25 @@
 (defpackage :voc-entry
-  (:use :cl :gtk :gdk :gobject :ol)
-  (:shadowing-import-from :ol :range))
+  (:use :cl :gtk :gdk :gobject :ol
+        :cl-prevalence)
+  (:shadowing-import-from :ol :range)
+  (:shadowing-import-from :cl-prevalence :name))
 
 (in-package :voc-entry)
+
+;;; Persistenz mit cl-prevalence
+
+(defparameter *prevalence-dir* #P "~/Studium/Dänisch I/vokabeln2/")
+(defparameter *default-store* nil)
+
+(defun load-data ()
+  (ensure-directories-exist *prevalence-dir*)
+  (unless *default-store*
+    ;; init prevalence
+    (setf *default-store*
+          (make-prevalence-system *prevalence-dir*))
+    ;; initiliase the lektionen root object, if it is not available yet
+    (unless #5=(get-root-object *default-store* :lektionen)
+            (setf #5# (make-array 2 :adjustable t :fill-pointer 0)))))
 
 ;;; Oberfläche für die Eingabe
 
@@ -44,7 +61,9 @@
   (let ((store (make-instance 'array-list-store)))
     (store-add-column store "gchararray" #'name)
     (store-add-column store "gint" #'lektion-voc-count)
-    ;; TODO populate from prevalence
+    ;; populate from prevalence
+    (setf (slot-value store 'gtk::items)
+          (get-root-object *default-store* :lektionen))
     store))
 
 (defun add-tv-column (view title col-index)
@@ -62,6 +81,10 @@
 (defmacro on-clicked (button &body body)
   `(connect-signal ,button "clicked"
                    (ilambda (b) ,@body)))
+
+(defun voc-entry ()
+  (load-data)
+  (lektion-overview-ui))
 
 (defun lektion-overview-ui ()
   (within-main-loop
@@ -95,16 +118,24 @@
         (on-clicked new-button
           (let ((l (make-instance 'lektion)))
             (store-add-item lektionen l)
+            ;; propagate changes to persistance
+            #5=(setf (get-root-object *default-store* :lektionen)
+                     (gtk::store-items lektionen))
             #1#
             (entry-ui window l)))
         (on-clicked del-button
           (aif (tv-selected-row view)
-               (store-remove-item lektionen
-                                  (store-item lektionen it))))
+               (progn
+                 (store-remove-item lektionen
+                                   (store-item lektionen it))
+                 #5# ; propagate
+                 )))
         ;; TODO
         #|(on-clicked train-button)|#
-        #|(on-clicked save-button)|#
-        )
+        (on-clicked save-button
+          #5# ; propagate
+          ;; write persistance data to disk
+          (snapshot *default-store*)))
       ;; configure tree view
       (add-tv-column view "Lektionstitel" 0)
       (add-tv-column view "Anzahl Vokabeln" 1)
