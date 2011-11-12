@@ -1,8 +1,8 @@
 (defpackage :voc-entry
+  (:shadowing-import-from :gtk :range)
+  (:shadowing-import-from :cl-prevalence :name)
   (:use :cl :gtk :gdk :gobject :ol
-        :cl-prevalence)
-  (:shadowing-import-from :ol :range)
-  (:shadowing-import-from :cl-prevalence :name))
+        :cl-prevalence))
 
 (in-package :voc-entry)
 
@@ -108,7 +108,7 @@ Remember, nil is a sequence too!"
                (button :label "Neu anlegen" :var new-button) :expand nil
                (button :label "Löschen" :var del-button) :expand nil
                (label) 
-               (button :label "Sichern" :var save-button) :expand nil) :expand nil
+               (button :label "Speichern" :var save-button) :expand nil) :expand nil
               (scrolled-window
                :hscrollbar-policy :never
                :vscrollbar-policy :automatic
@@ -139,7 +139,11 @@ Remember, nil is a sequence too!"
                  #5# ; propagate
                  )))|#
         ;; TODO
-        #|(on-clicked train-button)|#
+        (on-clicked train-button
+          (aif (tv-selected-row view)
+               (progn
+                 #1#
+                 (voc-train-ui window (store-item lektionen it)))))
         (on-clicked save-button
           #5# ; propagate
           ;; write persistance data to disk
