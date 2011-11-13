@@ -3,7 +3,8 @@
                cl-gtk2-gtk
                cl-prevalence
                cl-who
-               cxml)
+               cxml
+               ccb)
   :serial t
   :components ((:file "voc-format")
                (:file "voc-entry")

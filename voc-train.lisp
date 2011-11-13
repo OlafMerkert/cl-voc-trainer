@@ -8,38 +8,55 @@
 (defclass training-session ()
   ((lektion :accessor lektion
             :initarg  :lektion)
-   (asked :accessor asked)
+   (voc-box :accessor voc-box)
+   (can :accessor can)
    (len :accessor len)
-   (asked-min :accessor asked-min
-              :initform 0)))
+   (runs :accessor runs
+         :initform 0)
+   (pointer :accessor pointer
+            :initform 0)))
 
-(defmethod vokabeln ((training-session training-session))
-  (vokabeln (lektion training-session)))
+;;; TODO modelliere einen Karteikasten, in dem die Vokabeln sortiert werden.
 
-(defmethod vokabel ((training-session training-session) i)
-  (aref (vokabeln (lektion training-session)) i))
+
+(defun random-permute-subvector (vector start end)
+  (unless (= start end)
+   (let* ((n (- end start))
+          (ra (random (ccb:factorial n)))
+          (perm (ccb:permutation-unrank n ra))
+          (tmp-arr (subseq vector start end)))
+     (loop for i from start below end
+        and j from 0 do
+          (setf (aref vector i)
+                (aref tmp-arr (1- (aref perm j)))))
+     vector)))
 
 (defmethod initialize-instance :after ((training-session training-session) &key)
-  (with-slots (asked len) training-session
-   (setf len (length (vokabeln training-session))
-         asked (make-array len
-                           :initial-element 0))))
+  (with-slots (voc-box can len) training-session
+      (setf
+       ;; sortiere nach score
+       voc-box (sort (map 'vector #'identity (vokabeln (lektion training-session)))
+                 #'< :key #'confidence)
+       len (length voc-box)
+       ;; anfang der beherrschten vokabeln
+       can (or (position-if (lambda (x) (<= *conf-factor* x))
+                            voc-box :key #'confidence)
+               len))
+    (shuffle-the-box training-session)))
+
+(defmethod shuffle-the-box ((training-session training-session))
+  (with-slots (voc-box can len) training-session
+    ;; nun permutiere die beiden Teillisten mit einer zufälligen Permutation
+    (random-permute-subvector voc-box 0 can)
+    (random-permute-subvector voc-box can len)))
 
 (defmethod confidence ((vokabel vokabel))
   (with-slots (richtig falsch) vokabel
-    (/ (+ 1 falsch)
-       (+ 1 richtig))))
+    (/ (+ 1 richtig)
+       (+ 1 falsch))))
 
-(defparameter *conf-factor* 3)
-
-(defmethod try-next-voc ((training-session training-session))
-  (with-slots (len asked asked-min) training-session
-    (let* ((index (random len))
-           (conf  (confidence (vokabel training-session index)))
-           (ask-count (aref asked index)))
-      (if (or (= ask-count asked-min)
-              (<= ask-count (* *conf-factor* conf)))
-          index))))
+;; so viel mehr richtige als falsch
+(defparameter *conf-factor* 2.5)
 
 (defun random-elt (seq)
   "return a random element from the sequence."
@@ -49,14 +66,28 @@
 ;; todo use a more sophisticated strategy for asking vocs
 
 (defun tillitstrue (fn)
+  "Rufe FN auf, bis es nicht mehr NIL zurückgibt und liefere diese
+Rückgabe."
   (do ((x (funcall fn) (funcall fn)))
       (x x)))
 
 (defmethod next-voc ((training-session training-session))
-  (with-slots (asked asked-min) training-session
-   (let ((index (tillitstrue (lambda () (try-next-voc training-session)))))
-     (minf asked-min (incf (aref asked index)))
-     (vokabel training-session index))))
+  (with-slots (voc-box pointer runs can len) training-session
+   ;; teste auf pointer Überlauf
+   (cond ((and (evenp runs)
+               (>= pointer can))
+          (incf runs)
+          (setf pointer 0))
+         ((and (oddp runs)
+               (>= pointer len))
+          (incf runs)
+          (setf pointer 0)
+          ;; neu mischen
+          (shuffle-the-box training-session)))
+   ;; Rückgabe der richtigen Vokabel
+   (prog1
+       (aref voc-box pointer)
+     (incf pointer))))
 
 (defun voc-train-ui (parent lektion)
   (within-main-loop
