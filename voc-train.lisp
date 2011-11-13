@@ -1,10 +1,45 @@
 (in-package :voc-entry)
 
+(define-modify-macro minf (&rest args) min)
+
+
 (setf *random-state* (make-random-state t))
 
 (defclass training-session ()
   ((lektion :accessor lektion
-            :initarg  :lektion)))
+            :initarg  :lektion)
+   (asked :accessor asked)
+   (len :accessor len)
+   (asked-min :accessor asked-min
+              :initform 0)))
+
+(defmethod vokabeln ((training-session training-session))
+  (vokabeln (lektion training-session)))
+
+(defmethod vokabel ((training-session training-session) i)
+  (aref (vokabeln (lektion training-session)) i))
+
+(defmethod initialize-instance :after ((training-session training-session) &key)
+  (with-slots (asked len) training-session
+   (setf len (length (vokabeln training-session))
+         asked (make-array len
+                           :initial-element 0))))
+
+(defmethod confidence ((vokabel vokabel))
+  (with-slots (richtig falsch) vokabel
+    (/ (+ 1 falsch)
+       (+ 1 richtig))))
+
+(defparameter *conf-factor* 3)
+
+(defmethod try-next-voc ((training-session training-session))
+  (with-slots (len asked asked-min) training-session
+    (let* ((index (random len))
+           (conf  (confidence (vokabel training-session index)))
+           (ask-count (aref asked index)))
+      (if (or (= ask-count asked-min)
+              (<= ask-count (* *conf-factor* conf)))
+          index))))
 
 (defun random-elt (seq)
   "return a random element from the sequence."
@@ -13,8 +48,15 @@
 
 ;; todo use a more sophisticated strategy for asking vocs
 
+(defun tillitstrue (fn)
+  (do ((x (funcall fn) (funcall fn)))
+      (x x)))
+
 (defmethod next-voc ((training-session training-session))
-  (random-elt (vokabeln (lektion training-session))))
+  (with-slots (asked asked-min) training-session
+   (let ((index (tillitstrue (lambda () (try-next-voc training-session)))))
+     (minf asked-min (incf (aref asked index)))
+     (vokabel training-session index))))
 
 (defun voc-train-ui (parent lektion)
   (within-main-loop
