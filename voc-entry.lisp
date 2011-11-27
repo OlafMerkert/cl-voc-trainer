@@ -2,7 +2,9 @@
   (:shadowing-import-from :gtk :range)
   (:shadowing-import-from :cl-prevalence :name)
   (:use :cl :gtk :gdk :gobject :ol
-        :cl-prevalence))
+        :cl-prevalence)
+  (:export
+   :voc-main))
 
 (in-package :voc-entry)
 
@@ -89,7 +91,7 @@ Remember, nil is a sequence too!"
   `(connect-signal ,button "clicked"
                    (ilambda (b) ,@body)))
 
-(defun voc-entry ()
+(defun voc-main ()
   (load-data)
   (lektion-overview-ui))
 

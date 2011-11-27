@@ -33,10 +33,11 @@
 
 (defun least-known-vocs (voc-list)
   (let* ((voc-vector        (list->array voc-list))
-         (sorted-voc-vector (sort voc-vector #'< :key #'confidence)))
+         (sorted-voc-vector (sort voc-vector #'< :key #'confidence))
+         (size              (min *group-size* (length sorted-voc-vector))))
     ;; mix up the vocs with the lowest score
-    (random-permute-subvector sorted-voc-vector 0 *group-size*)
-    (subseq sorted-voc-vector *group-size*)))
+    (random-permute-subvector sorted-voc-vector 0 size)
+    (subseq sorted-voc-vector 0 size)))
 
 (defmethod reload-voc-box ((training-session training-session))
   (with-slots (voc-box lektion run pointer) training-session
@@ -52,8 +53,8 @@
 
 (defmethod confidence ((vokabel vokabel))
   (with-slots (richtig falsch) vokabel
-    (/ (+ 1 richtig)
-       (+ 1 falsch))))
+    (- richtig
+       falsch)))
 
 ;; so viel mehr richtige als falsch
 (defparameter *conf-factor* 2.5)
@@ -74,7 +75,7 @@ Rückgabe."
 (defmethod next-voc ((training-session training-session))
   (with-slots (voc-box pointer run) training-session
     ;; teste auf pointer Überlauf
-    (when (>= pointer *group-size*)
+    (when (>= pointer (length voc-box))
       (setf pointer 0)
       (incf run))
     ;; teste auf run Überlauf
@@ -84,9 +85,10 @@ Rückgabe."
             pointer 0
             run 0))
     ;; Rückgabe der richtigen Vokabel
-    (prog1
-        (aref voc-box pointer)
-      (incf pointer))))
+    (let ((voc (aref voc-box pointer)))
+      (incf pointer)
+      (format t "~&Confidence: ~A~%" (confidence voc))
+      voc)))
 
 (defun voc-train-ui (parent lektion)
   (within-main-loop
