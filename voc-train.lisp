@@ -114,6 +114,8 @@ Rückgabe."
             (correct-button (make-instance 'button :label "korrekt"))
             (wrong-button (make-instance 'button :label "falsch"))
             (next-button (make-instance 'button :label "weiter"))
+            (confidence-label (make-instance 'label :label ""
+                                             :xalign 0.8))
             ;; zustand
             (current-voc nil)
             (training-session (make-instance 'training-session :lektion lektion)))
@@ -121,6 +123,7 @@ Rückgabe."
         (setf (radio-button-group de-button) (list da-button))
         ;; Zeile 1
         (table-attach tab lname 0 2 0 1)
+        (table-attach tab confidence-label 2 3 0 1)
         ;; Zeile 2
         (table-attach tab label-1 0 1 1 2)
         (table-attach tab da-button 1 2 1 2)
@@ -140,7 +143,9 @@ Rückgabe."
                  (ask-dansk ()
                    (toggle-button-active da-button))
                  (ask-next-voc ()
-                   (setf current-voc (next-voc training-session))
+                   (setf current-voc (next-voc training-session)
+                         ;; reset confidence display
+                         (label-label confidence-label) "")
                    (if (ask-dansk)
                        (progn
                          (display da-display (dansk current-voc))
@@ -150,6 +155,8 @@ Rückgabe."
                          (display de-display (deutsch current-voc)))))
                  (show-solution ()
                    (when current-voc
+                     (setf (label-label confidence-label)
+                           (format nil "~A" (confidence current-voc)))
                      (display da-display (dansk current-voc))
                      (display de-display (deutsch current-voc))))
                  (correct-voc ()

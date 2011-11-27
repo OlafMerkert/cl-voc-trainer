@@ -220,11 +220,11 @@ Remember, nil is a sequence too!"
                      #2# (deutsch modus)))
           #3#)
         ;; TODO Vokabel löschen
-        #|(on-clicked del-button 
+        (on-clicked del-button 
           (aif (tv-selected-row view)
                (store-remove-item vokabeln
                                   (store-item vokabeln it)))
-          #3#)|#
+          #3#)
         ;; on closing the window, move the edits back to the lektion.
         (connect-signal
          window "destroy"
