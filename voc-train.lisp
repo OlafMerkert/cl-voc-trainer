@@ -2,17 +2,17 @@
 
 (define-modify-macro minf (&rest args) min)
 
-
 (setf *random-state* (make-random-state t))
+
+(defparameter *group-size* 12)
+(defparameter *group-iterations* 2)
 
 (defclass training-session ()
   ((lektion :accessor lektion
             :initarg  :lektion)
    (voc-box :accessor voc-box)
-   (can :accessor can)
-   (len :accessor len)
-   (runs :accessor runs
-         :initform 0)
+   (run :accessor run
+        :initform 0)
    (pointer :accessor pointer
             :initform 0)))
 
@@ -31,24 +31,24 @@
                 (aref tmp-arr (1- (aref perm j)))))
      vector)))
 
-(defmethod initialize-instance :after ((training-session training-session) &key)
-  (with-slots (voc-box can len) training-session
-      (setf
-       ;; sortiere nach score
-       voc-box (sort (map 'vector #'identity (vokabeln (lektion training-session)))
-                 #'< :key #'confidence)
-       len (length voc-box)
-       ;; anfang der beherrschten vokabeln
-       can (or (position-if (lambda (x) (<= *conf-factor* x))
-                            voc-box :key #'confidence)
-               len))
-    (shuffle-the-box training-session)))
+(defun least-known-vocs (voc-list)
+  (let* ((voc-vector        (list->array voc-list))
+         (sorted-voc-vector (sort voc-vector #'< :key #'confidence)))
+    ;; mix up the vocs with the lowest score
+    (random-permute-subvector sorted-voc-vector 0 *group-size*)
+    (subseq sorted-voc-vector *group-size*)))
 
-(defmethod shuffle-the-box ((training-session training-session))
-  (with-slots (voc-box can len) training-session
-    ;; nun permutiere die beiden Teillisten mit einer zufälligen Permutation
-    (random-permute-subvector voc-box 0 can)
-    (random-permute-subvector voc-box can len)))
+(defmethod reload-voc-box ((training-session training-session))
+  (with-slots (voc-box lektion run pointer) training-session
+    (setf voc-box
+          (least-known-vocs (vokabeln lektion))
+          pointer 0
+          run 0)))
+
+(defmethod initialize-instance :after ((training-session training-session) &key)
+  (reload-voc-box training-session))
+
+
 
 (defmethod confidence ((vokabel vokabel))
   (with-slots (richtig falsch) vokabel
@@ -72,22 +72,21 @@ Rückgabe."
       (x x)))
 
 (defmethod next-voc ((training-session training-session))
-  (with-slots (voc-box pointer runs can len) training-session
-   ;; teste auf pointer Überlauf
-   (cond ((and (evenp runs)
-               (>= pointer can))
-          (incf runs)
-          (setf pointer 0))
-         ((and (oddp runs)
-               (>= pointer len))
-          (incf runs)
-          (setf pointer 0)
-          ;; neu mischen
-          (shuffle-the-box training-session)))
-   ;; Rückgabe der richtigen Vokabel
-   (prog1
-       (aref voc-box pointer)
-     (incf pointer))))
+  (with-slots (voc-box pointer run) training-session
+    ;; teste auf pointer Überlauf
+    (when (>= pointer *group-size*)
+      (setf pointer 0)
+      (incf run))
+    ;; teste auf run Überlauf
+    (when (>= run *group-iterations*)
+      (setf voc-box
+            (least-known-vocs (vokabeln (lektion training-session)))
+            pointer 0
+            run 0))
+    ;; Rückgabe der richtigen Vokabel
+    (prog1
+        (aref voc-box pointer)
+      (incf pointer))))
 
 (defun voc-train-ui (parent lektion)
   (within-main-loop
