@@ -66,25 +66,25 @@ Remember, nil is a sequence too!"
   (let ((store (make-instance 'array-list-store)))
     (store-add-column store "gchararray" #'dansk)
     (store-add-column store "gchararray" #'deutsch)
-    (store-add-column store "gint" #'confidence)
+    (store-add-column store "gint"       #'confidence)
     store))
 
 (defun make-lektion-store ()
   (let ((store (make-instance 'array-list-store)))
     (store-add-column store "gchararray" #'name)
-    (store-add-column store "gint" #'lektion-voc-count)
-    (store-add-column store "gint" #'confidence)
+    (store-add-column store "gint"       #'lektion-voc-count)
+    (store-add-column store "gint"       #'confidence)
     ;; populate from prevalence
     (setf (slot-value store 'gtk::items)
           (get-root-object *default-store* :lektionen))
     store))
 
 (defun add-tv-column (view title col-index)
-  (let ((column (make-instance 'tree-view-column :title title))
+  (let ((column   (make-instance 'tree-view-column :title title))
         (renderer (make-instance 'cell-renderer-text)))
-        (tree-view-column-pack-start column renderer)
-        (tree-view-column-add-attribute column renderer "text" col-index)
-        (tree-view-append-column view column)))
+    (tree-view-column-pack-start     column renderer)
+    (tree-view-column-add-attribute  column renderer "text" col-index)
+    (tree-view-append-column view    column)))
 
 (defun tv-selected-row (view)
   (let ((row-paths (tree-selection-selected-rows (tree-view-selection view))))
@@ -109,12 +109,12 @@ Remember, nil is a sequence too!"
              :var window
              (v-box
               (h-button-box
-               (button :label "Trainieren" :var train-button) :expand nil
+               (button :label "Trainieren"  :var train-button)  :expand nil
                (button :label "Korrigieren" :var change-button) :expand nil
-               (button :label "Neu anlegen" :var new-button) :expand nil
-               (button :label "Löschen" :var del-button) :expand nil
+               (button :label "Neu anlegen" :var new-button)    :expand nil
+               (button :label "Löschen"     :var del-button)    :expand nil
                (label) 
-               (button :label "Speichern" :var save-button) :expand nil) :expand nil
+               (button :label "Speichern"   :var save-button)   :expand nil) :expand nil
               (scrolled-window
                :hscrollbar-policy :never
                :vscrollbar-policy :automatic
@@ -155,7 +155,7 @@ Remember, nil is a sequence too!"
           ;; write persistance data to disk
           (snapshot *default-store*)))
       ;; configure tree view
-      (add-tv-column view "Lektionstitel" 0)
+      (add-tv-column view "Lektionstitel"   0)
       (add-tv-column view "Anzahl Vokabeln" 1)
       (add-tv-column view "Minimale Punkte" 2)
       (connect-signal window "destroy" (ilambda (w) (leave-gtk-main)))
@@ -239,7 +239,7 @@ Remember, nil is a sequence too!"
                  (widget-sensitive parent) t)
            (leave-gtk-main))))
       ;; setup the tree view
-      (add-tv-column view "Dansk" 0)
+      (add-tv-column view "Dansk"   0)
       (add-tv-column view "Deutsch" 1)
       (add-tv-column view "Punkte"  2)
       ;; focus input
