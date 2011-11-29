@@ -53,6 +53,8 @@ Remember, nil is a sequence too!"
    (vokabeln :accessor vokabeln
              :initform (make-array 10 :adjustable t :fill-pointer 0))))
 
+(defmethod confidence (obj) 0)
+
 (create-standard-print-object vokabel
                               dansk "-" deutsch (richtig falsch))
 (create-standard-print-object lektion name)
@@ -64,12 +66,14 @@ Remember, nil is a sequence too!"
   (let ((store (make-instance 'array-list-store)))
     (store-add-column store "gchararray" #'dansk)
     (store-add-column store "gchararray" #'deutsch)
+    (store-add-column store "gint" #'confidence)
     store))
 
 (defun make-lektion-store ()
   (let ((store (make-instance 'array-list-store)))
     (store-add-column store "gchararray" #'name)
     (store-add-column store "gint" #'lektion-voc-count)
+    (store-add-column store "gint" #'confidence)
     ;; populate from prevalence
     (setf (slot-value store 'gtk::items)
           (get-root-object *default-store* :lektionen))
@@ -153,6 +157,7 @@ Remember, nil is a sequence too!"
       ;; configure tree view
       (add-tv-column view "Lektionstitel" 0)
       (add-tv-column view "Anzahl Vokabeln" 1)
+      (add-tv-column view "Minimale Punkte" 2)
       (connect-signal window "destroy" (ilambda (w) (leave-gtk-main)))
       (widget-show window))))
 
@@ -236,6 +241,7 @@ Remember, nil is a sequence too!"
       ;; setup the tree view
       (add-tv-column view "Dansk" 0)
       (add-tv-column view "Deutsch" 1)
+      (add-tv-column view "Punkte"  2)
       ;; focus input
       #3#
       (widget-show window))))

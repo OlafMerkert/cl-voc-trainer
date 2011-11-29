@@ -49,12 +49,15 @@
 (defmethod initialize-instance :after ((training-session training-session) &key)
   (reload-voc-box training-session))
 
-
-
 (defmethod confidence ((vokabel vokabel))
   (with-slots (richtig falsch) vokabel
     (- richtig
        falsch)))
+
+(defmethod confidence ((lektion lektion))
+  (loop
+     for voc across (vokabeln lektion)
+     minimize (confidence voc)))
 
 ;; so viel mehr richtige als falsch
 (defparameter *conf-factor* 2.5)
