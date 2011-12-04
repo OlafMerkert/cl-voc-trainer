@@ -128,12 +128,12 @@ Rückgabe."
         (table-attach tab lname            0 2 0 1)
         (table-attach tab confidence-label 2 3 0 1)
         ;; Zeile 2
-        (table-attach tab label-           1 0 1 1 2)
+        (table-attach tab label-1          0 1 1 2)
         (table-attach tab da-button        1 2 1 2)
         (table-attach tab de-button        2 3 1 2)
-        (table-attach tab label-           2 0 1 3 4)
+        (table-attach tab label-2          0 1 3 4)
         (table-attach tab da-display       1 3 3 5)
-        (table-attach tab label-           3 0 1 5 6)
+        (table-attach tab label-3          0 1 5 6)
         (table-attach tab de-display       1 3 5 7)
         ;; Button-Zeile
         (table-attach tab correct-button   0 1 7 8 :x-options nil :y-options nil)
