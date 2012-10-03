@@ -11,8 +11,8 @@
   ((lektion :accessor lektion
             :initarg  :lektion)
    (voc-box :accessor voc-box)
-   (run :accessor run
-        :initform 0)
+   (run     :accessor run
+            :initform 0)
    (pointer :accessor pointer
             :initform 0)))
 
@@ -197,9 +197,7 @@ Rückgabe."
                       (ask-next-voc)
                       (sens-buttons t))) 
         ;; anzeigen
-        (connect-signal
-         window "destroy"
-         (ilambda (w)
-           (setf (widget-sensitive parent) t)
-           (leave-gtk-main))))
+        (on-destroy window 
+          (setf (widget-sensitive parent) t)
+          (leave-gtk-main)))
       (widget-show window))))

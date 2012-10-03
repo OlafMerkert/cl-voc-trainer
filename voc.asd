@@ -4,7 +4,9 @@
                cl-prevalence
                cl-who
                cxml
-               ccb)
+               ccb
+               ol-data-utils
+               cl-gtk-utils)
   :serial t
   :components ((:file "voc-format")
                (:file "voc-entry")
