@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<voc-file>
+    <author>Olaf Merkert</author>
+    <voc-module>
+        <title>Beispiellektion</title>
+        <languages>
+            <lang>Dansk</lang>
+            <lang>Deutsch</lang>
+        </languages>
+
+        <vocs>
+            <vv>
+                <v>Goddag</v>
+                <v>Guten Tag</v>
+            </vv>
+        </vocs>
+    </voc-module>
+</voc-file>
